@@ -1,10 +1,19 @@
 import cv2
 import numpy as np
 
-from tools.progress_bar import print_progress_bar
+from swarm_rescue.tools.progress_bar import print_progress_bar
 
 
 def wall_width_correction(image_source: cv2.Mat) -> cv2.Mat:
+    """
+    Corrects the width of wall segments in a binary image to a standard width.
+
+    Args:
+        image_source (cv2.Mat): The input binary image.
+
+    Returns:
+        cv2.Mat: The corrected image with standardized wall widths.
+    """
     img = image_source.copy()
     rows, cols = img.shape
     # imgTarget = np.zeros((rows, cols), np.uint8)
@@ -102,6 +111,15 @@ def wall_width_correction(image_source: cv2.Mat) -> cv2.Mat:
 
 
 def remove_white_patch(image_source: cv2.Mat) -> cv2.Mat:
+    """
+    Removes small white patches from a binary image.
+
+    Args:
+        image_source (cv2.Mat): The input binary image.
+
+    Returns:
+        cv2.Mat: The image with small white patches removed.
+    """
     img = image_source.copy()
     rows, cols = img.shape
 
@@ -176,6 +194,15 @@ def remove_white_patch(image_source: cv2.Mat) -> cv2.Mat:
 
 
 def remove_black_patch(image_source: cv2.Mat) -> cv2.Mat:
+    """
+    Removes small black patches from a binary image.
+
+    Args:
+        image_source (cv2.Mat): The input binary image.
+
+    Returns:
+        cv2.Mat: The image with small black patches removed.
+    """
     img = image_source.copy()
     rows, cols = img.shape
 
@@ -250,6 +277,15 @@ def remove_black_patch(image_source: cv2.Mat) -> cv2.Mat:
 
 
 def remove_noise(image_source: cv2.Mat) -> cv2.Mat:
+    """
+    Removes noise from a binary image using morphological operations.
+
+    Args:
+        image_source (cv2.Mat): The input binary image.
+
+    Returns:
+        cv2.Mat: The denoised image.
+    """
     # Remove white pixels noise
     size_kernel = 10
     kernel = np.ones((size_kernel, size_kernel), np.uint8)
@@ -279,31 +315,43 @@ def remove_noise(image_source: cv2.Mat) -> cv2.Mat:
 
 
 def image_cleaning(image_source: cv2.Mat) -> cv2.Mat:
+    """
+    Cleans the input image by correcting wall widths.
+
+    Args:
+        image_source (cv2.Mat): The input binary image.
+
+    Returns:
+        cv2.Mat: The cleaned image.
+    """
     img_clean = wall_width_correction(image_source)
     return img_clean
 
+def main():
+    img_path = ("/home/battesti/projetCompetDronesDGA/private-swarm-rescue/"
+                "map_data/map_medium_01_color.png")
+    # img_path = "/home/battesti/projetCompetDronesDGA/private-swarm-rescue/
+    #            "map_data/map_complete_map_2.png"
+    print("image path : {}".format(img_path))
+    img_source = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
+    cv2.imshow("img_source", img_source)
 
-img_path = ("/home/battesti/projetCompetDronesDGA/private-swarm-rescue/"
-            "map_data/map_medium_01_color.png")
-# img_path = "/home/battesti/projetCompetDronesDGA/private-swarm-rescue/
-#            "map_data/map_complete_map_2.png"
-print("image path : {}".format(img_path))
-img_source = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-cv2.imshow("img_source", img_source)
+    img_clean1 = remove_noise(img_source)
+    cv2.imshow("img_clean1", img_clean1)
 
-img_clean1 = remove_noise(img_source)
-cv2.imshow("img_clean1", img_clean1)
+    img_clean2 = image_cleaning(img_clean1)
+    cv2.imshow("img_clean2", img_clean2)
 
-img_clean2 = image_cleaning(img_clean1)
-cv2.imshow("img_clean2", img_clean2)
+    img_clean3 = remove_noise(img_clean2)
+    cv2.imshow("img_clean3", img_clean3)
 
-img_clean3 = remove_noise(img_clean2)
-cv2.imshow("img_clean3", img_clean3)
+    img_clean4 = remove_white_patch(img_clean3)
+    cv2.imshow("img_clean4", img_clean4)
 
-img_clean4 = remove_white_patch(img_clean3)
-cv2.imshow("img_clean4", img_clean4)
+    cv2.imwrite('/home/battesti/projetCompetDronesDGA/private-swarm-rescue/'
+                'map_data/map_clean.png', img_clean4)
 
-cv2.imwrite('/home/battesti/projetCompetDronesDGA/private-swarm-rescue/'
-            'map_data/map_clean.png', img_clean4)
+    cv2.waitKey(0)
 
-cv2.waitKey(0)
+if __name__ == '__main__':
+    main()

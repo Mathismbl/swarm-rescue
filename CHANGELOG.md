@@ -3,6 +3,88 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [5.1.3] - 2026-02-03
+
+### Fixed
+- bug fix : dead drones were not visible by other drones with the semantic sensor
+- bug fix : crash with semantic visualization when a drone is dead
+
+## [5.1.2] - 2025-11-27
+
+### Fixed
+- Correct evaluation guidelines
+
+## [5.1.1] - 2025-11-18
+
+### Fixed
+- Fix crash when cleanup memory after a round
+
+## [5.1.0] - 2025-10-21
+
+### Added
+- Add headless mode for running simulations without GUI
+- Add key 'E' to exit the program completely
+- Add disappearing walls feature with example implementation
+- Add final maps from 2024-2025 competition
+- Add new evaluation plan configurations
+- Add screen resize and scale functionality (may not work on some maps)
+- Add "Create a new map" explanation in README
+- Add `stat_saving_enabled` and `video_capture_enabled` options in config files
+- Add PyQtGraph dependency for improved visualization
+- Add `drone_v2_dead.png` texture for drones in kill zones
+
+### Changed
+- **Major change**: Replace matplotlib/pyplot visualization with PyQtGraph for better performance
+- Improve drone texture when in kill zone
+- Replace `MyMapxxx` naming convention with `Mapxxx` and `my_map` with `the_map`
+- Change team number padding from 2 to 3 digits and remove padding in some displays
+- Improve implementation with optimizations and caching
+- Clean up pymunk.Vec2d vs Tuple usage
+- Replace `SrColorWall` with `ColorWall` class
+- Replace `SRDisabler` class with `DisablerZone` class
+- Use `math.radians` and `math.degrees` instead of manual conversions
+- Update README with comprehensive improvements
+- Update INSTALL.md documentation
+- Move dependencies to pyproject.toml and remove requirements.txt/setup.py
+- Change `_display_lidar_graph` to `_should_display_lidar_graph`
+
+### Fixed
+- Fix compatibility issues with Ubuntu 20 and Python 3.8
+- Fix test_wall.py functionality
+- Fix bugs in check_map and my_drone_eval.py
+- Improve robustness of explored_map.py to avoid crashes
+- Fix wall rendering and collision detection
+- Fix _hitpoints calculation bug
+- Fix import issues and remove warnings after code inspection
+- Correct image_to_map tool functionality
+- Various crash prevention improvements
+- Remove useless dependencies and clean up project structure
+
+## [5.0.0] - 2025-09-11
+
+### Changed
+- Big change: we don't use the library simple-playground anymore. His code is now directly integrated in swarm-rescue. So, swarm-rescue is now independent of simple-playground.
+- Simplification of the architecture of the code.
+- Change of some function names
+- Change of some class names
+- Change of some file names
+- Change of some directory names
+
+## [4.1.0] - 2025-09-11
+
+### Changed
+- Now, some files define the "eval plans" : map name, number of rounds, configuration weight, zones configuration. Those files are in the directory config.
+
+## [4.0.4] - 2025-06-26
+
+### Changed
+- Improve image_to_map tool
+- Improve measurement tool
+
+### Fixed
+- Fixed bug: if the wounded were dropped just before the rescue center, they were not counted when they disappeared inside it
+- Added arcade version 2.6.17 in requirements.txt
+
 ## [4.0.3] - 2024-12-04
 
 ### Added
@@ -283,7 +365,14 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Initial commit
 
-[Unreleased]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.0.3...HEAD
+[Unreleased]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v5.1.3...HEAD
+[5.1.3]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v5.1.2...v5.1.3
+[5.1.2]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v5.1.1...v5.1.2
+[5.1.1]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v5.1.0...v5.1.1
+[5.1.0]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v5.0.0...v5.1.0
+[5.0.0]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.1.0...v5.0.0
+[4.1.0]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.0.4...v4.1.0
+[4.0.4]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.0.3...v4.0.4
 [4.0.3]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.0.2...v4.0.3
 [4.0.2]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.0.1...v4.0.2
 [4.0.1]: https://github.com/emmanuel-battesti/swarm-rescue/compare/v4.0.0...v4.0.1

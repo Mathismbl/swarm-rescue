@@ -1,6 +1,13 @@
+import pathlib
+import sys
 import time
 
-from spg_overlay.utils.timer import Timer
+# Insert the 'src' directory, located two levels up from the current script,
+# into sys.path. This ensures Python can find project-specific modules
+# (e.g., 'swarm_rescue') when the script is run from a subfolder like 'tests/'.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
+
+from swarm_rescue.simulation.utils.timer import Timer
 
 
 def test_start_timer():
