@@ -1,8 +1,20 @@
+import logging
+
 from statemachine import State
 from statemachine import StateMachine
 
 from spg_overlay.utils.vortex_utils.vortex_state_machines.brain_module import BrainModule
 from spg_overlay.utils.vortex_utils.vortex_state_machines import action_state_machine as sm
+from spg_overlay.utils.vortex_utils.com_analyzer import process_communication
+
+logger = logging.getLogger("state_machine")
+logger.setLevel(logging.DEBUG)
+
+console_handler = logging.StreamHandler()
+formatter = logging.Formatter("(%(name)s)[%(levelname)s]: %(message)s")
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 class Behavior(BrainModule, StateMachine):
     
@@ -46,9 +58,13 @@ class Behavior(BrainModule, StateMachine):
                             FollowerWaiting.to(FollowerComeCloser)
                             )
     
+    follower_special  = (FollowerWaiting.to(RootFollowerComeCloser))
+    
     reconfiguration_follower = (BranchReconfiguration.to(ReconfigurationFollower))
     
-    follower_waiting_procedure = (FollowerComeCloser.to(FollowerWaiting) | RootFollowerComeCloser.to(FollowerWaiting))
+    follower_waiting_procedure = (FollowerComeCloser.to(FollowerWaiting) |
+                                  RootFollowerComeCloser.to(FollowerWaiting) |
+                                  CalledToEnterTheEnvironment.to(FollowerWaiting))
 
     leader_wait_procedure = LeaderContinuExploration.to(LeaderWaiting)
 
@@ -73,9 +89,11 @@ class Behavior(BrainModule, StateMachine):
                  identifier
                  ):
         
-        super().__init__(signature)
+        # super().__init__(signature)
         self.identifier = identifier
         self.sm_action = sm.drone_waiting_stock_set(self)
+
+        super().__init__(signature)
 
         self.recieved_requests = {
         "Need behavior" : None
@@ -100,12 +118,16 @@ class Behavior(BrainModule, StateMachine):
         self.visual_msg = None
         self.visual_indication = None
 
+
     def on_enter_state(self, state):
-        if state.id != "DroneWaitingInStock":
-            print(f"id: {self.identifier}, behavior: {state.id}")
-            self.update_behavior_set(state)
-        else:
-            print(f"{state.id}")
+        # if state.id != "DroneWaitingInStock":
+        #     logger.info(f"id: {self.identifier}, behavior: {state.id}")
+        #     self.update_behavior_set(state)
+        # else:
+        #     logger.info(f"{state.id}")
+        logger.info(f"id: {self.identifier}, behavior: {state.id}")
+        self.update_behavior_set(state)
+
 
     def update_behavior_set(self, drone_behavior):
 
@@ -223,6 +245,12 @@ class Behavior(BrainModule, StateMachine):
             if (self.current_state.id == "CalledToEnterTheEnvironment"
                 and self.visual_msg == "purple"):
                 self.follower_come_closer()
+            elif self.current_state == Behavior.CalledToEnterTheEnvironment:
+                if self.visual_msg == "orange":
+                    self.follower_waiting_procedure()
+            elif self.current_state == Behavior.FollowerWaiting:
+                if self.visual_msg == "pink":
+                    self.follower_special()
 
         elif drone_situation["Corridor"]:
             if self.current_state.id == "LeaderLeaveTheRoot":
@@ -244,6 +272,10 @@ class Behavior(BrainModule, StateMachine):
                 if drone_situation["Visual connectivity"][1][0][6] == "TC":
                     self.leader_explore()
             
+            elif self.current_state == Behavior.FollowerWaiting:
+                if self.visual_msg == "pink":
+                    self.follower_come_closer()
+            
             elif self.current_state == Behavior.FollowerComeCloser:
                 if self.recieved_msgs["drone role"][1]["Root Follower"] == True:
                     self.dead_end_procedure()
@@ -260,6 +292,8 @@ class Behavior(BrainModule, StateMachine):
                 self.intersection_procedure()
             elif self.current_state.id == "RootFollowerComeCloser":
                 self.intersection_procedure()
+            elif self.current_state == Behavior.FollowerComeCloser:
+                self.intersection_procedure()
             elif self.current_state == Behavior.FollowerManageIntersection:
                 if self.visual_msg == "purple":
                     self.follower_come_closer()
@@ -274,8 +308,8 @@ class Behavior(BrainModule, StateMachine):
             elif self.current_state == Behavior.BranchReconfiguration:
                 self.reconfiguration_follower()
 
-        if self.identifier == 0 :
-            print(drone_situation, self.recieved_msgs["drone role"][1])
+        # if self.identifier == 0 :
+        #     print(drone_situation, self.recieved_msgs["drone role"][1])
 
 
     def action_determination(self, drone_situation):
@@ -366,6 +400,7 @@ class Behavior(BrainModule, StateMachine):
                 if drone_situation["Corridor"]:
                     self.sm_action.stationary()
                     self.recieved_msgs["com send"] = None
+                    self.recieved_msgs["centered"] = None
                     self.behavior_determination(drone_situation)
         
         elif self.current_state == Behavior.LeaderWaiting:
@@ -399,6 +434,8 @@ class Behavior(BrainModule, StateMachine):
             elif self.sm_action.current_state == sm.agent_called_set.Stationary:
                 if self.visual_msg == "purple":
                     self.behavior_determination(drone_situation)
+                elif self.visual_msg == "orange":
+                    self.behavior_determination(drone_situation)
         
 
         elif self.current_state == Behavior.FollowerComeCloser:
@@ -412,28 +449,31 @@ class Behavior(BrainModule, StateMachine):
                         self.sm_action.rotation_to_the_left_most_gap()
                 else:
                     self.sm_action.stationary()
+                    
             elif self.sm_action.current_state == sm.follower_come_closer_set.Sendmsg:
                 if self.recieved_msgs["com send"] is not None:
                     self.sm_action.stationary()
+
             elif self.sm_action.current_state == sm.follower_come_closer_set.RotationToTheLeftMostGap:
                 if self.recieved_msgs["aligned"] is not None:
                     self.recieved_msgs["aligned"] = None
                     self.sm_action.get_closer()
+                    
             elif self.sm_action.current_state == sm.follower_come_closer_set.GetCloser:
                 if self.visual_msg == "red":
                     self.sm_action.stationary()
                     self.recieved_msgs["com send"] = None
                     self.behavior_determination(drone_situation)
-                # elif isinstance(drone_situation["Intersection"],list):
-                #     self.sm_action.stationary()
-                #     self.recieved_msgs["com send"] = None
-                #     self.behavior_determination(drone_situation)
+
                 elif self.visual_msg == "orange":
                     self.sm_action.stationary()
                     self.recieved_msgs["com send"] = None
                     self.behavior_determination(drone_situation)
+                
+                elif self.visual_msg == "purple":
+                    self.sm_action.stationary()
+                    self.recieved_msgs["com send"] = None
             
-
         elif self.current_state == Behavior.RootFollowerComeCloser:
             if self.sm_action.current_state == sm.root_follower_come_closer_set.Stationary:
                 if self.recieved_msgs["com send"] is None:
@@ -460,14 +500,20 @@ class Behavior(BrainModule, StateMachine):
 
         elif self.current_state == Behavior.FollowerManageIntersection:
             if self.sm_action.current_state == sm.follower_manage_intersection_set.Stationary:
-                if self.visual_msg == "purple":
+                # print(self.identifier, drone_situation)
+                if drone_situation["Last in branch"] == True and self.sm_action.flag_msg == False:
+                    self.sm_action.send_msg_reconf_over()
+                elif self.visual_msg == "purple":
                     self.sm_action.stationary()
+                    self.recieved_msgs["centered"] = None
+                    self.recieved_msgs["com send"] = None
                     self.behavior_determination(drone_situation)
                 elif self.visual_msg == "red":
                     if drone_situation["All branch explored"] == True:
                         self.sm_action.send_msg()
                     else:
                         self.recieved_msgs["com send"] = None
+                        self.recieved_msgs["centered"] = None
                         self.sm_action.stationary()
                         self.behavior_determination(drone_situation)
                 elif self.recieved_msgs["centered"] is None:
@@ -479,15 +525,20 @@ class Behavior(BrainModule, StateMachine):
                     self.sm_action.stationary()
                 elif self.visual_msg == "purple":
                     self.sm_action.stationary()
+                    self.recieved_msgs["centered"] = None
                     self.behavior_determination(drone_situation)
                 elif self.visual_msg == "red":
                     if drone_situation["All branch explored"] == True:
                         self.sm_action.send_msg()
                     else:
-                        self.recieved_msgs["com send"] = None 
+                        self.recieved_msgs["com send"] = None
+                        self.recieved_msgs["centered"] = None
                         self.sm_action.stationary()
                         self.behavior_determination(drone_situation)
-            elif self.sm_action.current_state == sm.follower_manage_intersection_set.Sendmsg: 
+            elif self.sm_action.current_state == sm.follower_manage_intersection_set.SendmsgReconf: 
+                if self.recieved_msgs["com send"] is not None:
+                    self.sm_action.stationary()
+            elif self.sm_action.current_state == sm.follower_manage_intersection_set.SendmsgReconfOver:
                 if self.recieved_msgs["com send"] is not None:
                     self.sm_action.stationary()
 
@@ -517,8 +568,12 @@ class Behavior(BrainModule, StateMachine):
                     self.sm_action.stationary()
             elif self.sm_action.current_state == sm.reconfiguration_follower_set.EmptyBranch:
                 if isinstance(drone_situation["Intersection"],list):
+                    self.sm_action.change_role()
+            elif self.sm_action.current_state == sm.reconfiguration_follower_set.ChangeRole:
+                if self.recieved_msgs["drone role set"] is not None:
                     self.sm_action.stationary()
                     self.recieved_msgs["com send"] = None
+                    self.recieved_msgs["drone role set"] = None
                     self.behavior_determination(drone_situation)
 
         elif self.current_state == Behavior.NewLeader:
@@ -548,6 +603,8 @@ class Behavior(BrainModule, StateMachine):
         elif self.current_state == Behavior.FollowerWaiting:
             if self.sm_action.current_state == sm.follower_waiting_set.Stationary:
                 self.sm_action.stationary()
+                if self.visual_msg == "pink":
+                    self.behavior_determination(drone_situation)
             
 
         # if self.identifier ==0:
@@ -561,54 +618,58 @@ class Behavior(BrainModule, StateMachine):
 
 
 
-    def process_communication(self, communication, vc_list):
+    # def process_communication(self, communication, vc_list):
 
-        if len(communication) > 0:
-            coms = []
-            for com in communication:
-                coms.append(com[1])
+    #     if len(communication) > 0:
+    #         coms = []
+    #         for com in communication:
+    #             coms.append(com[1])
 
-            if  vc_list[0] is not None:
-                id_vc = [int(vc[0]) for vc in vc_list[1]]
+    #         if  vc_list[0] is not None:
+    #             id_vc = [int(vc[0]) for vc in vc_list[1]]
 
-                for com in coms:
-                    if com["id"] in id_vc:
-                        if len(com["visual msgs"])>0 and "purple" in com["visual msgs"]:
-                            self.visual_msg = "purple"
-                            print(self.identifier, self.visual_msg)
+    #             for com in coms:
+    #                 if com["id"] in id_vc:
+    #                     if len(com["visual msgs"])>0 and "purple" in com["visual msgs"]:
+    #                         self.visual_msg = "purple"
+    #                         print(self.identifier, self.visual_msg, vc_list)
 
-                        if len(com["visual msgs"])>0 and "red" in com["visual msgs"]:
-                            self.visual_msg = "red"
-                            print(self.identifier, self.visual_msg)
+    #                     if len(com["visual msgs"])>0 and "red" in com["visual msgs"]:
+    #                         self.visual_msg = "red"
+    #                         print(self.identifier, self.visual_msg, vc_list)
 
-                        if len(com["visual msgs"])>0 and "orange" in com["visual msgs"]:
-                            self.visual_msg = "orange"
-                            print(self.identifier, self.visual_msg)
+    #                     if len(com["visual msgs"])>0 and "orange" in com["visual msgs"]:
+    #                         self.visual_msg = "orange"
+    #                         print(self.identifier, self.visual_msg, vc_list)
+                        
+    #                     if len(com["visual msgs"])>0 and "pink" in com["visual msgs"]:
+    #                         self.visual_msg = "pink"
+    #                         print(self.identifier, self.visual_msg, vc_list)
 
 
-            if self.current_state.id == "DroneWaitingInStock":
-                for com in coms:
-                    if len(com["visual msgs"])>0 and com["visual msgs"][0][1] == self.identifier:
-                        self.visual_msg = com["visual msgs"][0][0]
-                        print(self.identifier, self.visual_msg)
+    #         if self.current_state.id == "DroneWaitingInStock":
+    #             for com in coms:
+    #                 if len(com["visual msgs"])>0 and com["visual msgs"][0][1] == self.identifier:
+    #                     self.visual_msg = com["visual msgs"][0][0]
+    #                     print(self.identifier, self.visual_msg)
 
-            if (self.current_state.id == "LeaderLeaveTheRoot"
-                and self.sm_action.current_state.id == "LeaveRoot"):
-                for com in coms:
-                    if len(com["visual indications"])>0 and com["visual indications"][0] == "white":
-                        self.visual_indication = com["visual indications"][0]
+    #         if (self.current_state.id == "LeaderLeaveTheRoot"
+    #             and self.sm_action.current_state.id == "LeaveRoot"):
+    #             for com in coms:
+    #                 if len(com["visual indications"])>0 and com["visual indications"][0] == "white":
+    #                     self.visual_indication = com["visual indications"][0]
 
-            if (self.current_state.id == "RootFollowerComeCloser"
-                and self.sm_action.current_state.id == "LeaveRoot"):
-                for com in coms:
-                    if len(com["visual indications"])>0 and com["visual indications"][0] == "white":
-                        self.visual_indication = com["visual indications"][0]
+    #         if (self.current_state.id == "RootFollowerComeCloser"
+    #             and self.sm_action.current_state.id == "LeaveRoot"):
+    #             for com in coms:
+    #                 if len(com["visual indications"])>0 and com["visual indications"][0] == "white":
+    #                     self.visual_indication = com["visual indications"][0]
 
-            # if self.current_state == Behavior.FollowerComeCloser:
-            #     for com in coms:
-            #         if len(com["visual indications"])>0 and com["visual indications"][0] == "blue":
-            #             self.visual_indication = com["visual indications"][0]
-            #             print(self.identifier, self.visual_indication)
+    #         # if self.current_state == Behavior.FollowerComeCloser:
+    #         #     for com in coms:
+    #         #         if len(com["visual indications"])>0 and com["visual indications"][0] == "blue":
+    #         #             self.visual_indication = com["visual indications"][0]
+    #         #             print(self.identifier, self.visual_indication)
             
 
                         

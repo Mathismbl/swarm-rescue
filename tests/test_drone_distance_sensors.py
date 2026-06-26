@@ -1,5 +1,4 @@
 import numpy as np
-
 import pytest
 
 from spg_overlay.entities.drone_distance_sensors import compute_ray_angles

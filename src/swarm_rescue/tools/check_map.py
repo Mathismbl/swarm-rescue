@@ -10,7 +10,7 @@ from spg_overlay.gui_map.gui_sr import GuiSR
 from spg_overlay.entities.drone_abstract import DroneAbstract
 from spg_overlay.reporting.evaluation import EvalPlan, ZonesConfig, EvalConfig
 
-from maps.maps_vortex.map_test_04 import My4Map
+from maps.maps_vortex.map_test_06 import My6Map
 
 
 class MyDrone(DroneAbstract):
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     #           f"zones \'{eval_config.zones_name_for_filename}\'")
     #     my_map = eval_config.map_type(eval_config.zones_config)
     
-    my_map =My4Map()
+    my_map =My6Map()
     my_playground = my_map.construct_playground(drone_type=MyDrone)
 
     my_gui = GuiSR(playground=my_playground,

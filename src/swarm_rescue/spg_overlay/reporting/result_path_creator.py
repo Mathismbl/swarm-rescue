@@ -20,7 +20,7 @@ class ResultPathCreator:
         """
 
         self._team_info = team_info
-        self._directory = str(Path.home()) + '/results_swarm_rescue'
+        self._directory = str(Path.home()) + '/PhD_ws/swarm-rescue/results_swarm_rescue'
         self._result_path = None
 
         self._create_path_name()

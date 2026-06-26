@@ -43,6 +43,7 @@ class Situation(BrainModule):
         "Exploration completed" : False,
         "Visual connectivity" : [None],
         "All branch explored" : False,
+        "Last in branch" : False,
         "Collision" : False
         }
 
@@ -100,6 +101,7 @@ class Situation(BrainModule):
         if len(analyzed_data["visual connectivity"]) > 0:
             self.drone_situation["Visual connectivity"] = [True, analyzed_data["visual connectivity"]]
             self.all_branch_explored(analyzed_data)
+            self.last_in_branch(analyzed_data)
 
         else:
             self.drone_situation["Visual connectivity"] = [None]
@@ -108,11 +110,11 @@ class Situation(BrainModule):
 
 
     def all_branch_explored(self, analyzed_data):
-        if self.drone_situation["Intersection"] == True:
+        if isinstance(self.drone_situation["Intersection"], list) == True:
             VC = analyzed_data["visual connectivity"]
             gap_nb = analyzed_data["positive gap number"]
 
-            for vc in VC[1]:
+            for vc in VC:
                 if vc[3] == 1:
                     self.drone_situation["All branch explored"] = True
                 else:
@@ -122,7 +124,23 @@ class Situation(BrainModule):
             self.drone_situation["All branch explored"] = False
 
 
+    def last_in_branch(self, analyzed_data):
+        if isinstance(self.drone_situation["Intersection"], list) == True:
+            flag = False
+            VC = analyzed_data["visual connectivity"]
 
+            for vc in VC:
+                if vc[3] == 0:
+                    flag = True
+            if flag:
+                self.drone_situation["Last in branch"] = False
+            else:
+                self.drone_situation["Last in branch"] = True
+                    
+                # else:
+                #     print(self.identifier, "cccc")
+                #     self.drone_situation["Last in branch"] = True
+                #     flag = True
         
         
 

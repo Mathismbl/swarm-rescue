@@ -3,6 +3,7 @@ import random
 import numpy
 from typing import Optional
 import time
+import logging
 
 from statemachine import State
 from statemachine import StateMachine
@@ -23,7 +24,14 @@ from spg_overlay.utils.vortex_utils.vortex_state_machines.drone_role_state_machi
 from spg_overlay.utils.vortex_utils.vortex_state_machines.drone_situation_state_machine import Situation
 from spg_overlay.utils.vortex_utils.vortex_state_machines.sensors_analyzer import SensorsAnalyzer
 
+logger = logging.getLogger("my_drone_vortex")
+logger.setLevel(logging.DEBUG)
 
+console_handler = logging.StreamHandler()
+formatter = logging.Formatter("(%(name)s)[%(levelname)s]: %(message)s")
+console_handler.setFormatter(formatter)
+
+logger.addHandler(console_handler)
 
 
 
@@ -90,12 +98,14 @@ class MyDroneVortex(BrainModule, DroneAbstract):
         "change situation from root" : None,
         "situation changed" : None,
         "send branch reconfiguration" : None,
+        "send branch reconfiguration over" : None,
         "send more agent required" : None,
         "send come closer" : None,
         "send wait for reconfiguration" : None,
         "centered" : None,
         "aligned" : None,
-        "too close" : None
+        "too close" : None,
+        "reverse gap" : None
         }
 
 
@@ -173,6 +183,9 @@ class MyDroneVortex(BrainModule, DroneAbstract):
         
         elif title == "set reconfiguration role":
             self.send(self.signature, self.role.signature, title)
+        
+        elif title == "set new leader role":
+            self.send(self.signature, self.role.signature, title)
 
         elif title == "drone role set":
             self.send(self.signature, self.behavior.signature, title)
@@ -203,6 +216,9 @@ class MyDroneVortex(BrainModule, DroneAbstract):
 
         elif title == "too close":
             self.send(self.signature, self.behavior.signature, title)
+        
+        elif title == "reverse gap":
+            self.send(self.signature, self.sensors_analyzer.signature, title)
 
 
 
@@ -248,6 +264,10 @@ class MyDroneVortex(BrainModule, DroneAbstract):
             if self.recieved_msgs["send wait for reconfiguration"]:
                 visual_com["visual msgs"].append("orange")
                 self.recieved_msgs["send wait for reconfiguration"] = None
+                self.send(self.signature, self.behavior.signature,"com send")
+            if self.recieved_msgs["send branch reconfiguration over"]:
+                visual_com["visual msgs"].append("pink")
+                self.recieved_msgs["send branch reconfiguration over"] = None
                 self.send(self.signature, self.behavior.signature,"com send")
 
             # if self.identifier == 0:

@@ -8,13 +8,16 @@ class drone_waiting_stock_set(StateMachine):
     drorne_waiting = Idle.to.itself(internal=True)
 
     def __init__(self, behavior):
-        super().__init__()
+        # super().__init__()
         self.behavior = behavior
         self.drone_action = {"action" : None, "gap sel id" : None}
+        super().__init__()
+        # self.on_enter_state(self.current_state)
 
     def on_enter_state(self, state):
-        if state.id != "Idle":
-            self.drone_action["action"] = state.id
+        # if state.id != "Idle":
+        #     self.drone_action["action"] = state.id
+        self.drone_action["action"] = state.id
 
 
 class first_agent_start_set(StateMachine):
@@ -215,19 +218,23 @@ class follower_come_closer_set(StateMachine):
     GetCloser = State()
     RotationToTheLeftMostGap = State()
     
-    send_msg = Stationary.to(Sendmsg)
+    send_msg = (Stationary.to(Sendmsg) | GetCloser.to(Sendmsg))
     get_closer = (Stationary.to(GetCloser)| RotationToTheLeftMostGap.to(GetCloser))
     rotation_to_the_left_most_gap = Stationary.to(RotationToTheLeftMostGap)
     stationary = (GetCloser.to(Stationary) | Stationary.to.itself() | Sendmsg.to(Stationary))
     
     def __init__(self, behavior):
-        super().__init__()
+        
         self.behavior = behavior
         self.drone_action = {"action" : "Stationary", "gap sel id" : None}
+        super().__init__()
 
     def on_enter_state(self, state):
-        if state.id != "Stationary":
-            self.drone_action["action"] = state.id
+        # if state.id != "Stationary":
+        #     self.drone_action["action"] = state.id
+        # else:
+        #     self.drone_action["action"] = state.id
+        self.drone_action["action"] = state.id
     
     def on_enter_Sendmsg(self):
         self.behavior.send(self.behavior.signature, "Module manager", "send come closer")
@@ -252,16 +259,19 @@ class follower_come_closer_set(StateMachine):
 class follower_manage_intersection_set(StateMachine):
     Stationary = State(initial=True)
     Centering = State()
-    Sendmsg = State()
+    SendmsgReconf = State()
+    SendmsgReconfOver = State()
     
     centering = Stationary.to(Centering)
-    stationary = (Centering.to(Stationary) | Stationary.to.itself(on = "stat"))
-    send_msg = (Stationary.to(Sendmsg) | Centering.to(Sendmsg))
+    stationary = (Centering.to(Stationary) | Stationary.to.itself(on = "stat") | SendmsgReconf.to(Stationary) | SendmsgReconfOver.to(Stationary))
+    send_msg_reconf = (Stationary.to(SendmsgReconf) | Centering.to(SendmsgReconf))
+    send_msg_reconf_over = (Stationary.to(SendmsgReconfOver) | Centering.to(SendmsgReconfOver))
 
     def __init__(self, behavior):
         super().__init__()
         self.behavior = behavior
         self.drone_action = {"action" : "Stationary", "gap sel id" : None}
+        self.flag_msg = False
     
     def on_enter_state(self, state):
         if state.id != "Stationary":
@@ -276,8 +286,12 @@ class follower_manage_intersection_set(StateMachine):
     def stat(self, state):
         self.drone_action["action"] = state.id
 
-    def on_enter_Sendmsg(self):
+    def on_enter_SendmsgReconf(self):
         self.behavior.send(self.behavior.signature, "Module manager", "send branch reconfiguration")
+    def on_enter_SendmsgReconfOver(self):
+        if self.flag_msg == False:
+            self.behavior.send(self.behavior.signature, "Module manager", "send branch reconfiguration over")
+            self.flag_msg = True
 
 
 class interruption_set(StateMachine):
@@ -320,6 +334,9 @@ class branch_reconfiguration_set(StateMachine):
     def on_enter_TurnAround(self):
         self.drone_action["gap sel id"] = 0
     
+    def on_exit_TurnAround(self):
+        self.behavior.send(self.behavior.signature, "Module manager", "reverse gap")
+    
 
 class follower_waiting_set(StateMachine):
     Stationary = State(initial=True)
@@ -340,10 +357,12 @@ class reconfiguration_follower_set(StateMachine):
     Stationary = State(initial=True)
     Sendmsg = State()
     EmptyBranch = State()
+    ChangeRole = State()
 
-    stationary = (Sendmsg.to(Stationary) | Stationary.to.itself() | EmptyBranch.to(Stationary))
+    stationary = (Sendmsg.to(Stationary) | Stationary.to.itself() | EmptyBranch.to(Stationary) | ChangeRole.to(Stationary))
     send_msg = Stationary.to(Sendmsg)
     get_closer = Stationary.to(EmptyBranch)
+    change_role = EmptyBranch.to(ChangeRole)
 
 
     def __init__(self, behavior):
@@ -357,6 +376,9 @@ class reconfiguration_follower_set(StateMachine):
 
     def on_enter_Sendmsg(self):
         self.behavior.send(self.behavior.signature, "Module manager", "send branch reconfiguration")
+
+    def on_enter_ChangeRole(self):
+        self.behavior.send(self.behavior.signature, "Module manager", "set drone role")
 
 
 class new_leader_set(StateMachine):

@@ -1,4 +1,4 @@
-from solutions.vortex_solution import MyDroneVortex
+from solutions.vortex_1 import MyDroneVortex
 
 
 class MyDroneEval(MyDroneVortex):
